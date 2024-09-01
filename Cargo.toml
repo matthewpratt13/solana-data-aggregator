@@ -1,0 +1,23 @@
+[package]
+name = "solana-data-aggregator"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "4"
+anyhow = "1.0"
+dotenvy = "0.15"
+env_logger = "0.11"
+log = "0.4"
+solana-client = "2.0"
+solana-sdk = "2.0"
+solana-transaction-status = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sqlx = { version = "0.8", features = [ "postgres", "runtime-tokio", "tls-native-tls", "macros" ] }
+sqlx-cli = { version = "0.8", default-features=false, features = [ "native-tls", "postgres" ]}
+tokio = { version = "1", features = ["full"] }
+
+[patch.crates-io.curve25519-dalek]
+git = "https://github.com/solana-labs/curve25519-dalek.git"
+rev = "c14774464c4d38de553c6ef2f48a10982c1b4801"

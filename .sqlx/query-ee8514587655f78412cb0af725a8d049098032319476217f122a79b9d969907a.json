@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "CREATE TABLE IF NOT EXISTS transactions (\n                id SERIAL PRIMARY KEY,\n                signature VARCHAR NOT NULL,\n                sender VARCHAR NOT NULL,\n                receiver VARCHAR NOT NULL,\n                sol_amount BIGINT NOT NULL,\n                fee BIGINT NOT NULL,\n                timestamp BIGINT NOT NULL,\n                prev_block_hash VARCHAR NOT NULL\n            )",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "ee8514587655f78412cb0af725a8d049098032319476217f122a79b9d969907a"
+}
