@@ -40,8 +40,8 @@ pub fn parse_transaction(
         _ => todo!(),
     };
 
-    let sender_pubkey = message.account_keys.first()?.pubkey.clone();
-    let receiver_pubkey = message.account_keys.last()?.pubkey.clone();
+    let sender = message.account_keys.first().cloned()?.pubkey;
+    let receiver = message.account_keys.last().cloned()?.pubkey;
 
     let meta = txn.transaction.meta.as_ref()?;
 
@@ -60,12 +60,12 @@ pub fn parse_transaction(
     // build `TransactionData` struct
     Some(TransactionData {
         signature: signatures.first()?.to_string(),
-        sender: sender_pubkey,
-        receiver: receiver_pubkey,
+        sender,
+        receiver,
         sol_amount,
         fee,
         timestamp,
-        prev_block_hash: prev_block_hash,
+        prev_block_hash,
     })
 }
 

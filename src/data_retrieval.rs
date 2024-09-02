@@ -20,6 +20,8 @@ use tokio::time::{self, Duration};
 
 use std::str::FromStr;
 
+use crate::data_processing::process_transactions;
+
 pub struct SolanaClient {
     client: RpcClient,
 }
@@ -61,16 +63,13 @@ impl SolanaClient {
     ) -> anyhow::Result<Vec<EncodedConfirmedTransactionWithStatusMeta>> {
         let mut transactions = Vec::new();
 
-        for signature in signatures {
+        for sig in signatures {
             let config = RpcTransactionConfig {
                 encoding: Some(UiTransactionEncoding::JsonParsed),
                 ..Default::default()
             };
 
-            if let Ok(txn) = self
-                .client
-                .get_transaction_with_config(signature, config.clone())
-            {
+            if let Ok(txn) = self.client.get_transaction_with_config(sig, config.clone()) {
                 transactions.push(txn);
             }
         }
@@ -97,11 +96,11 @@ impl SolanaClient {
             interval.tick().await;
 
             match self.fetch_epoch_data(&address).await {
-                Ok(transactions) => {
-                    println!("Fetched {} transactions.", transactions.len());
-                    // TODO: do something (process) with the transactions?
+                Ok(txns) => {
+                    let processed_txns = process_transactions(txns);
+                    println!("{:?}", processed_txns);
                 }
-                Err(err) => eprintln!("Error fetching data: {:?}", err),
+                Err(e) => eprintln!("Error fetching data: {:?}", e),
             }
         }
     }

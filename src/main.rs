@@ -6,10 +6,10 @@ mod data_storage;
 use solana_sdk::pubkey::Pubkey;
 use tokio::task;
 
-use std::{env, str::FromStr};
+use std::{env, str::FromStr, sync::Arc};
 
 use data_retrieval::SolanaClient;
-use data_storage::Database;
+use data_storage::get_pool;
 
 // TODO: add logging (general)
 // TODO: update error handling (general)
@@ -31,7 +31,7 @@ async fn main() -> anyhow::Result<()> {
 
     // database setup
     let db_url = env::var("DATABASE_URL")?;
-    let db = Database::new(&db_url).await?;
+    let db = Arc::new(get_pool(&db_url).await?);
 
     // monitored address's public key
     let address = Pubkey::from_str(&env::var("ADDRESS")?)?;
