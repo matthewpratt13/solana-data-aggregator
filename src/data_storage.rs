@@ -66,6 +66,7 @@ pub async fn get_pool(db_url: &str) -> anyhow::Result<PgPool> {
     Ok(pool)
 }
 
+#[allow(dead_code)]
 pub async fn insert_transaction(
     pool: &Arc<PgPool>,
     txn_data: TransactionData,
