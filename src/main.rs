@@ -24,7 +24,7 @@ async fn main() -> anyhow::Result<()> {
     let solana_client = SolanaClient::new(&rpc_url);
 
     // monitored address's public key
-    let address = Pubkey::from_str(&env::var("ADDRESS")?)?;
+    let address = Pubkey::from_str(&env::var("ADDRESS_A")?)?;
 
     // database setup
     let db_url = env::var("DATABASE_URL")?;

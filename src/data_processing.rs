@@ -121,7 +121,7 @@ pub fn is_valid_transaction(txn: &TransactionData) -> bool {
         && is_valid_blockhash(&txn.prev_blockhash)
 }
 
-fn is_valid_signature(signature: &String) -> bool {
+fn is_valid_signature(signature: &str) -> bool {
     if !signature.to_string().is_empty() {
         true
     } else {
@@ -130,10 +130,10 @@ fn is_valid_signature(signature: &String) -> bool {
     }
 }
 
-fn is_valid_pubkey(pubkey: &String) -> bool {
+fn is_valid_pubkey(pubkey: &str) -> bool {
     let re = Regex::new(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$").expect("Invalid regex");
 
-    if pubkey.len() == 32 && re.is_match(pubkey) {
+    if pubkey.len() == 44 && re.is_match(pubkey) {
         true
     } else {
         error!("Invalid public key: `{pubkey}`. Skipping transaction…");
@@ -141,7 +141,7 @@ fn is_valid_pubkey(pubkey: &String) -> bool {
     }
 }
 
-fn is_valid_sender_receiver(sender: &String, receiver: &String) -> bool {
+fn is_valid_sender_receiver(sender: &str, receiver: &str) -> bool {
     if sender != receiver {
         true
     } else {
@@ -177,13 +177,120 @@ fn is_valid_timestamp(timestamp: i64) -> bool {
     }
 }
 
-fn is_valid_blockhash(hash: &String) -> bool {
+fn is_valid_blockhash(hash: &str) -> bool {
     let re = Regex::new(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$").expect("Invalid regex");
 
-    if hash.len() == 32 && re.is_match(hash) {
+    if hash.len() == 44 && re.is_match(hash) {
         true
     } else {
         error!("Invalid blockhash: `{hash}`. Skipping transaction…");
         false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+
+    #[test]
+    fn test_valid_signature() {
+        let valid_signature = "5NzT3RMAGiJjxGqAXgy6xakdcTfV7oF2dt2m5x8y7vc48pmQ9JVDd8LfPtkMRNZkNmJmhYoP2cFHGip7vRtXVcdv";
+        assert!(is_valid_signature(&valid_signature.to_string()));
+
+        let invalid_signature = "";
+        assert!(!is_valid_signature(&invalid_signature.to_string()));
+    }
+
+    #[test]
+    fn test_valid_pubkey() {
+        let _ = dotenvy::dotenv();
+
+        let valid_pubkey = env::var("ADDRESS_A").expect("`ADDRESS_A` must be set");
+        assert!(is_valid_pubkey(&valid_pubkey.to_string()));
+
+        let invalid_pubkey = "InvalidPubkeyString";
+        assert!(!is_valid_pubkey(&invalid_pubkey.to_string()));
+    }
+
+    #[test]
+    fn test_valid_amount() {
+        let valid_amount = 1000;
+        assert!(is_valid_amount(valid_amount));
+
+        let invalid_amount = 0;
+        assert!(!is_valid_amount(invalid_amount));
+    }
+
+    #[test]
+    fn test_valid_fee() {
+        let valid_fee = 500;
+        assert!(is_valid_fee(valid_fee));
+
+        let invalid_fee = 0;
+        assert!(!is_valid_fee(invalid_fee));
+    }
+
+    #[test]
+    fn test_valid_timestamp() {
+        let valid_timestamp = 1625077743;
+        assert!(is_valid_timestamp(valid_timestamp));
+
+        let invalid_timestamp = -1625077743;
+        assert!(!is_valid_timestamp(invalid_timestamp));
+    }
+
+    #[test]
+    fn test_valid_blockhash() {
+        let valid_hash = "4sZ76MsNd8y3WSw2L1nfd3AqLoYxdmC98sERoMRbHV14";
+        assert!(is_valid_blockhash(&valid_hash.to_string()));
+
+        let invalid_hash = "InvalidHashString";
+        assert!(!is_valid_blockhash(&invalid_hash.to_string()));
+    }
+
+    #[test]
+    fn test_valid_sender_receiver() {
+        let _ = dotenvy::dotenv();
+
+        let sender = env::var("ADDRESS_A").expect("`ADDRESS_A` must be set");
+        let receiver = env::var("ADDRESS_B").expect("`ADDRESS_B` must be set");
+
+        assert!(is_valid_sender_receiver(&sender, &receiver));
+
+        let same_pubkey = sender.clone();
+
+        assert!(!is_valid_sender_receiver(&sender, &same_pubkey));
+    }
+
+    #[test]
+    fn test_valid_transaction() {
+        let _ = dotenvy::dotenv();
+
+        let sender = env::var("ADDRESS_A").expect("`ADDRESS_A` must be set");
+        let receiver = env::var("ADDRESS_B").expect("`ADDRESS_B` must be set");
+
+        let valid_transaction = TransactionData {
+        signature: "5NzT3RMAGiJjxGqAXgy6xakdcTfV7oF2dt2m5x8y7vc48pmQ9JVDd8LfPtkMRNZkNmJmhYoP2cFHGip7vRtXVcdv".to_string(),
+        sender,
+        receiver,
+        sol_amount: 1000,
+        fee: 500,
+        timestamp: 1625077743,
+        prev_blockhash: "4sZ76MsNd8y3WSw2L1nfd3AqLoYxdmC98sERoMRbHV14".to_string(),
+    };
+        assert!(is_valid_transaction(&valid_transaction));
+
+        let invalid_transaction = TransactionData {
+            signature: "".to_string(),
+            sender: "9WgXgM4UQftvDStk9SMeLBjQ1tr1sVpYzVv9ekDwpa5X".to_string(),
+            receiver: "InvalidPubkeyString".to_string(),
+            sol_amount: 0,
+            fee: 0,
+            timestamp: -1625077743,
+            prev_blockhash: "InvalidHashString".to_string(),
+        };
+
+        assert!(!is_valid_transaction(&invalid_transaction));
     }
 }
