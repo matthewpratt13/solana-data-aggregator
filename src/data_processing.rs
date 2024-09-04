@@ -68,7 +68,7 @@ pub fn parse_transaction(
     };
 
     // calculate SOL amount transferred (simplified example)
-    let sol_amount = meta.post_balances[0] - meta.pre_balances[0];
+    let sol_amount = meta.post_balances[1] - meta.pre_balances[1];
 
     // get transaction fee
     let fee = meta.fee;
@@ -191,6 +191,14 @@ fn is_valid_blockhash(hash: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use solana_sdk::{message::MessageHeader, pubkey::Pubkey, signature::Signature};
+    use solana_transaction_status::{
+        option_serializer::OptionSerializer, parse_accounts::ParsedAccount,
+        EncodedConfirmedTransactionWithStatusMeta, EncodedTransaction,
+        EncodedTransactionWithStatusMeta, UiMessage, UiParsedMessage, UiRawMessage, UiTransaction,
+        UiTransactionStatusMeta,
+    };
+
     use std::env;
 
     #[test]
@@ -292,5 +300,135 @@ mod tests {
         };
 
         assert!(!is_valid_transaction(&invalid_transaction));
+    }
+
+    #[test]
+    fn test_parse_transaction() {
+        // Test 1: Valid parsed transaction
+        let txn = EncodedConfirmedTransactionWithStatusMeta {
+            transaction: EncodedTransactionWithStatusMeta {
+                transaction: EncodedTransaction::Json(UiTransaction {
+                    signatures: vec![Signature::new_unique().to_string()],
+                    message: UiMessage::Parsed(UiParsedMessage {
+                        account_keys: vec![
+                            ParsedAccount {
+                                pubkey: Pubkey::new_unique().to_string(),
+                                writable: true,
+                                signer: true,
+                                source: None,
+                            },
+                            ParsedAccount {
+                                pubkey: Pubkey::new_unique().to_string(),
+                                writable: false,
+                                signer: false,
+                                source: None,
+                            },
+                        ],
+                        recent_blockhash: "recent_blockhash".to_string(),
+                        instructions: vec![],
+                        address_table_lookups: None,
+                    }),
+                }),
+
+                meta: Some(UiTransactionStatusMeta {
+                    err: None,
+                    status: Ok(()),
+                    fee: 5000,
+                    pre_balances: vec![100_000, 50_000],
+                    post_balances: vec![85_000, 60_000],
+                    inner_instructions: OptionSerializer::Skip,
+                    log_messages: OptionSerializer::Skip,
+                    pre_token_balances: OptionSerializer::Skip,
+                    post_token_balances: OptionSerializer::Skip,
+                    rewards: OptionSerializer::Skip,
+                    loaded_addresses: OptionSerializer::Skip,
+                    return_data: OptionSerializer::Skip,
+                    compute_units_consumed: OptionSerializer::Skip,
+                }),
+                version: None,
+            },
+            slot: 42,
+            block_time: Some(1625077743),
+        };
+
+        let parsed_transaction = parse_transaction(txn).unwrap();
+        assert_eq!(parsed_transaction.sol_amount, 10_000);
+        assert_eq!(parsed_transaction.fee, 5000);
+        assert_eq!(parsed_transaction.timestamp, 1625077743);
+        assert_eq!(parsed_transaction.prev_blockhash, "recent_blockhash");
+
+        // Test 2: Raw message instead of parsed
+        let txn = EncodedConfirmedTransactionWithStatusMeta {
+            transaction: EncodedTransactionWithStatusMeta {
+                transaction: EncodedTransaction::Json(UiTransaction {
+                    signatures: vec![Signature::new_unique().to_string()],
+                    message: UiMessage::Raw(UiRawMessage {
+                        header: MessageHeader {
+                            ..Default::default()
+                        },
+                        account_keys: vec![],
+                        recent_blockhash: "recent_blockhash".to_string(),
+                        instructions: vec![],
+                        address_table_lookups: None,
+                    }),
+                }),
+
+                meta: Some(UiTransactionStatusMeta {
+                    err: None,
+                    status: Ok(()),
+                    fee: 5000,
+                    pre_balances: vec![100_000, 50_000],
+                    post_balances: vec![85_000, 60_000],
+                    inner_instructions: OptionSerializer::Skip,
+                    log_messages: OptionSerializer::Skip,
+                    pre_token_balances: OptionSerializer::Skip,
+                    post_token_balances: OptionSerializer::Skip,
+                    rewards: OptionSerializer::Skip,
+                    loaded_addresses: OptionSerializer::Skip,
+                    return_data: OptionSerializer::Skip,
+                    compute_units_consumed: OptionSerializer::Skip,
+                }),
+                version: None,
+            },
+            slot: 42,
+            block_time: Some(1625077743),
+        };
+
+        assert!(parse_transaction(txn).is_none());
+
+        // Test 3: Transaction metadata missing
+        let txn = EncodedConfirmedTransactionWithStatusMeta {
+            transaction: EncodedTransactionWithStatusMeta {
+                transaction: EncodedTransaction::Json(UiTransaction {
+                    signatures: vec![Signature::new_unique().to_string()],
+                    message: UiMessage::Parsed(UiParsedMessage {
+                        account_keys: vec![
+                            ParsedAccount {
+                                pubkey: Pubkey::new_unique().to_string(),
+                                writable: true,
+                                signer: true,
+                                source: None,
+                            },
+                            ParsedAccount {
+                                pubkey: Pubkey::new_unique().to_string(),
+                                writable: false,
+                                signer: false,
+                                source: None,
+                            },
+                        ],
+                        recent_blockhash: "recent_blockhash".to_string(),
+                        instructions: vec![],
+                        address_table_lookups: None,
+                    }),
+                }),
+
+                meta: None,
+                version: None,
+            },
+            slot: 42,
+            block_time: Some(1625077743),
+        };
+
+        assert!(parse_transaction(txn).is_none());
     }
 }
