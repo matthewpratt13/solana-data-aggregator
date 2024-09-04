@@ -15,34 +15,6 @@ use crate::data_processing::TransactionData;
 use log::info;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 
-// use std::{
-//     collections::HashMap,
-//     sync::{Arc, Mutex},
-// };
-
-// /// In-memory storage with a thread-safe `HashMap`.
-// pub struct InMemoryStorage {
-//     transactions: Arc<Mutex<HashMap<String, TransactionData>>>,
-// }
-
-// impl InMemoryStorage {
-//     pub fn new() -> Self {
-//         InMemoryStorage {
-//             transactions: Arc::new(Mutex::new(HashMap::new())),
-//         }
-//     }
-
-//     pub fn insert_transaction(&self, txn_data: TransactionData) {
-//         let mut transactions = self.transactions.lock().unwrap();
-//         transactions.insert(txn_data.signature.clone(), txn_data);
-//     }
-
-//     pub fn get_all_transactions(&self) -> Vec<TransactionData> {
-//         let transactions = self.transactions.lock().unwrap();
-//         transactions.values().cloned().collect()
-//     }
-// }
-
 pub async fn get_pool(db_url: &str) -> anyhow::Result<PgPool> {
     let pool = PgPoolOptions::new()
         .max_connections(5)
