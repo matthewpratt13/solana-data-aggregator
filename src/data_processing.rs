@@ -73,7 +73,7 @@ pub fn parse_transaction(
     // get transaction fee
     let fee = meta.fee;
 
-    // get block time
+    // get block time  
     let timestamp = txn.block_time.unwrap_or_default();
 
     // get previous block hash

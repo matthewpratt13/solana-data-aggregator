@@ -114,3 +114,54 @@ pub async fn get_all_transactions(pool: &Arc<PgPool>) -> anyhow::Result<Vec<Tran
         })
         .collect())
 }
+
+#[cfg(test)]
+mod tests {
+    use std::env;
+
+    use super::*;
+
+    use sqlx::PgPool;
+
+    #[tokio::test]
+    async fn test_store_transaction() -> Result<(), anyhow::Error> {
+        let _ = dotenvy::dotenv();
+
+        let sender = env::var("ADDRESS_A").expect("`ADDRESS_A` must be set");
+        let receiver = env::var("ADDRESS_B").expect("`ADDRESS_B` must be set");
+
+        // Setup: Initialize a test database (using a different test database connection)
+        let pool = PgPool::connect("postgres://postgres@localhost/test_database").await?;
+
+        let valid_transaction = TransactionData {
+        signature: "5NzT3RMAGiJjxGqAXgy6xakdcTfV7oF2dt2m5x8y7vc48pmQ9JVDd8LfPtkMRNZkNmJmhYoP2cFHGip7vRtXVcdv".to_string(),
+        sender,
+        receiver,
+        sol_amount: 1000,
+        fee: 500,
+        timestamp: 1625077743,
+        prev_blockhash: "4sZ76MsNd8y3WSw2L1nfd3AqLoYxdmC98sERoMRbHV14".to_string(),
+    };
+
+        // Act: Store the transaction
+        insert_transaction(&Arc::new(pool.clone()), &valid_transaction).await?;
+
+        // Assert: Check that the transaction was stored
+        let result = sqlx::query!(
+            "SELECT * FROM transactions WHERE signature = $1",
+            valid_transaction.signature
+        )
+        .fetch_one(&pool)
+        .await?;
+
+        assert_eq!(result.signature, valid_transaction.signature);
+        assert_eq!(result.sender, valid_transaction.sender);
+        assert_eq!(result.receiver, valid_transaction.receiver);
+        assert_eq!(result.sol_amount, valid_transaction.sol_amount as i64);
+        assert_eq!(result.fee, valid_transaction.fee as i64);
+        assert_eq!(result.timestamp, valid_transaction.timestamp);
+        assert_eq!(result.prev_blockhash, valid_transaction.prev_blockhash);
+
+        Ok(())
+    }
+}
