@@ -10,17 +10,19 @@
 // * Implement a function to retrieve transactions and account data. This function will use asynchronous requests to fetch data.
 // * Use a background task (using `tokio::spawn`) to periodically poll the blockchain for new transactions.
 
+use log::{error, info};
 use solana_client::{
     rpc_client::{GetConfirmedSignaturesForAddress2Config, RpcClient},
     rpc_config::RpcTransactionConfig,
 };
 use solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey, signature::Signature};
 use solana_transaction_status::{EncodedConfirmedTransactionWithStatusMeta, UiTransactionEncoding};
+use sqlx::PgPool;
 use tokio::time::{self, Duration};
 
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
-use crate::data_processing::process_transactions;
+use crate::{data_processing::process_transactions, data_storage::insert_transaction};
 
 pub struct SolanaClient {
     client: RpcClient,
@@ -63,6 +65,8 @@ impl SolanaClient {
     ) -> anyhow::Result<Vec<EncodedConfirmedTransactionWithStatusMeta>> {
         let mut transactions = Vec::new();
 
+        info!("Fetching transactions…");
+
         for sig in signatures {
             let config = RpcTransactionConfig {
                 encoding: Some(UiTransactionEncoding::JsonParsed),
@@ -77,7 +81,7 @@ impl SolanaClient {
         Ok(transactions)
     }
 
-    /// Fetch and process epoch data.
+    /// Fetch epoch data.
     pub async fn fetch_epoch_data(
         &self,
         address: &Pubkey,
@@ -89,7 +93,7 @@ impl SolanaClient {
     }
 
     /// Continuously monitor the blockchain for new data.
-    pub async fn monitor_blockchain(&self, address: Pubkey) {
+    pub async fn monitor_blockchain(&self, address: Pubkey, database: Option<&Arc<PgPool>>) {
         let mut interval = time::interval(Duration::from_secs(10));
 
         loop {
@@ -98,9 +102,18 @@ impl SolanaClient {
             match self.fetch_epoch_data(&address).await {
                 Ok(txns) => {
                     let processed_txns = process_transactions(txns);
-                    println!("{:?}", processed_txns);
+
+                    info!("Fetched {} transactions", processed_txns.len(),);
+
+                    if let Some(db) = database {
+                        for txn in processed_txns.iter() {
+                            if let Err(e) = insert_transaction(db, txn).await {
+                                error!("Failed to insert transaction: {e:?}");
+                            }
+                        }
+                    }
                 }
-                Err(e) => eprintln!("Error fetching data: {:?}", e),
+                Err(e) => error!("Error fetching epoch data: {:?}", e),
             }
         }
     }

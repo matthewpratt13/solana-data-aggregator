@@ -12,6 +12,7 @@ use std::sync::Arc;
 
 use crate::data_processing::TransactionData;
 
+use log::info;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 
 // use std::{
@@ -57,7 +58,7 @@ pub async fn get_pool(db_url: &str) -> anyhow::Result<PgPool> {
         sol_amount BIGINT NOT NULL,
         fee BIGINT NOT NULL,
         timestamp BIGINT NOT NULL,
-        prev_block_hash VARCHAR NOT NULL
+        prev_blockhash VARCHAR NOT NULL
     )"
     )
     .execute(&pool)
@@ -69,10 +70,10 @@ pub async fn get_pool(db_url: &str) -> anyhow::Result<PgPool> {
 #[allow(dead_code)]
 pub async fn insert_transaction(
     pool: &Arc<PgPool>,
-    txn_data: TransactionData,
+    txn_data: &TransactionData,
 ) -> anyhow::Result<()> {
     sqlx::query!(
-            "INSERT INTO transactions (signature, sender, receiver, sol_amount, fee, timestamp, prev_block_hash)
+            "INSERT INTO transactions (signature, sender, receiver, sol_amount, fee, timestamp, prev_blockhash)
             VALUES ($1, $2, $3, $4, $5, $6, $7)",
             txn_data.signature,
             txn_data.sender,
@@ -80,16 +81,22 @@ pub async fn insert_transaction(
             txn_data.sol_amount as i64,
             txn_data.fee as i64,
             txn_data.timestamp,
-            txn_data.prev_block_hash
+            txn_data.prev_blockhash
         )
         .execute(pool.as_ref())
         .await?;
+
+    info!(
+        "Inserted transaction in PostgreSQL database: {:?}",
+        txn_data
+    );
+
     Ok(())
 }
 
 pub async fn get_all_transactions(pool: &Arc<PgPool>) -> anyhow::Result<Vec<TransactionData>> {
     let rows = sqlx::query!(
-            "SELECT signature, sender, receiver, sol_amount, fee, timestamp, prev_block_hash FROM transactions"
+            "SELECT signature, sender, receiver, sol_amount, fee, timestamp, prev_blockhash FROM transactions"
         )
         .fetch_all(pool.as_ref())
         .await?;
@@ -103,7 +110,7 @@ pub async fn get_all_transactions(pool: &Arc<PgPool>) -> anyhow::Result<Vec<Tran
             sol_amount: row.sol_amount as u64,
             fee: row.fee as u64,
             timestamp: row.timestamp,
-            prev_block_hash: row.prev_block_hash,
+            prev_blockhash: row.prev_blockhash,
         })
         .collect())
 }
