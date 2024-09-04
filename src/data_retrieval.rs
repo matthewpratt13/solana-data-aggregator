@@ -118,3 +118,60 @@ impl SolanaClient {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use anyhow::Result;
+    use std::env;
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn test_fetch_transactions() -> Result<()> {
+        dotenvy::dotenv()?;
+
+        let rpc_url = env::var("RPC_URL")?;
+        let solana_client = SolanaClient::new(&rpc_url);
+
+        let address_a = env::var("ADDRESS_A")?;
+        let address_b = env::var("ADDRESS_B")?;
+
+        let address_a_pubkey = Pubkey::from_str(&address_a).unwrap();
+        let address_b_pubkey = Pubkey::from_str(&address_b).unwrap();
+
+        let signatures_a = solana_client.fetch_transaction_signatures(&address_a_pubkey)?;
+        let signatures_b = solana_client.fetch_transaction_signatures(&address_b_pubkey)?;
+
+        println!("transaction signatures for address A: {:?}", signatures_a);
+        println!("transaction signatures for address B: {:?}", signatures_b);
+
+        assert!(
+            !signatures_a.is_empty(),
+            "No transactions found for address A"
+        );
+        assert!(
+            !signatures_b.is_empty(),
+            "No transactions found for address B"
+        );
+
+        let transactions_a = solana_client.fetch_transactions(&signatures_a)?;
+
+        let transactions_b = solana_client.fetch_transactions(&signatures_b)?;
+
+        assert!(
+            !transactions_a.is_empty(),
+            "No transaction data fetched for address A"
+        );
+        assert!(
+            !transactions_b.is_empty(),
+            "No transaction data fetched for address B"
+        );
+
+        println!("transaction data for signature A: {:#?}", transactions_a);
+        println!("transaction data for signature B: {:#?}", transactions_b);
+
+        // Further assertions can be added here based on the expected transaction data.
+        // For example, you could check that the fetched transactions have the correct sender, receiver, etc.
+
+        Ok(())
+    }
+}
