@@ -169,9 +169,6 @@ mod tests {
         println!("transaction data for signature A: {:#?}", transactions_a);
         println!("transaction data for signature B: {:#?}", transactions_b);
 
-        // Further assertions can be added here based on the expected transaction data.
-        // For example, you could check that the fetched transactions have the correct sender, receiver, etc.
-
         Ok(())
     }
 }
