@@ -8,7 +8,7 @@
 // * Use `serde` for JSON deserialization.
 // * Implement functions to parse transaction data and extract information.
 
-use log::{error, info};
+use log::{error, info, warn};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use solana_transaction_status::{
@@ -73,7 +73,7 @@ pub fn parse_transaction(
     // get transaction fee
     let fee = meta.fee;
 
-    // get block time  
+    // get block time
     let timestamp = txn.block_time.unwrap_or_default();
 
     // get previous block hash
@@ -125,7 +125,7 @@ fn is_valid_signature(signature: &str) -> bool {
     if !signature.to_string().is_empty() {
         true
     } else {
-        error!("Transaction signature is empty. Skipping transaction…");
+        warn!("Transaction signature is empty. Skipping transaction…");
         false
     }
 }
@@ -136,7 +136,7 @@ fn is_valid_pubkey(pubkey: &str) -> bool {
     if pubkey.len() == 44 && re.is_match(pubkey) {
         true
     } else {
-        error!("Invalid public key: `{pubkey}`. Skipping transaction…");
+        warn!("Invalid public key: `{pubkey}`. Skipping transaction…");
         false
     }
 }
@@ -145,7 +145,7 @@ fn is_valid_sender_receiver(sender: &str, receiver: &str) -> bool {
     if sender != receiver {
         true
     } else {
-        error!("Receiver cannot be sender. Skipping transaction…");
+        warn!("Receiver cannot be sender. Skipping transaction…");
         false
     }
 }
@@ -154,7 +154,7 @@ fn is_valid_amount(amount: u64) -> bool {
     if amount > 0 {
         true
     } else {
-        error!("Transfer amount must be positive. Skipping transaction…");
+        warn!("Transfer amount must be positive. Skipping transaction…");
         false
     }
 }
@@ -163,7 +163,7 @@ fn is_valid_fee(fee: u64) -> bool {
     if fee > 0 {
         true
     } else {
-        error!("Transfer fee must be positive. Skipping transaction…");
+        warn!("Transfer fee must be positive. Skipping transaction…");
         false
     }
 }
@@ -172,7 +172,7 @@ fn is_valid_timestamp(timestamp: i64) -> bool {
     if timestamp >= 0 {
         true
     } else {
-        error!("Block timestamp cannot be negative. Skipping transaction…");
+        warn!("Block timestamp cannot be negative. Skipping transaction…");
         false
     }
 }
@@ -183,7 +183,7 @@ fn is_valid_blockhash(hash: &str) -> bool {
     if hash.len() == 44 && re.is_match(hash) {
         true
     } else {
-        error!("Invalid blockhash: `{hash}`. Skipping transaction…");
+        warn!("Invalid blockhash: `{hash}`. Skipping transaction…");
         false
     }
 }
@@ -191,6 +191,7 @@ fn is_valid_blockhash(hash: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use solana_sdk::{message::MessageHeader, pubkey::Pubkey, signature::Signature};
     use solana_transaction_status::{
         option_serializer::OptionSerializer, parse_accounts::ParsedAccount,
@@ -329,7 +330,6 @@ mod tests {
                         address_table_lookups: None,
                     }),
                 }),
-
                 meta: Some(UiTransactionStatusMeta {
                     err: None,
                     status: Ok(()),
@@ -372,7 +372,6 @@ mod tests {
                         address_table_lookups: None,
                     }),
                 }),
-
                 meta: Some(UiTransactionStatusMeta {
                     err: None,
                     status: Ok(()),
@@ -421,7 +420,6 @@ mod tests {
                         address_table_lookups: None,
                     }),
                 }),
-
                 meta: None,
                 version: None,
             },
@@ -430,5 +428,138 @@ mod tests {
         };
 
         assert!(parse_transaction(txn).is_none());
+    }
+
+    #[test]
+    fn test_process_transactions() {
+        let _ = dotenvy::dotenv();
+
+        let sender = env::var("ADDRESS_A").expect("`ADDRESS_A` must be set");
+        let receiver = env::var("ADDRESS_B").expect("`ADDRESS_B` must be set");
+
+        // Valid parsed transaction
+        let txn1 = EncodedConfirmedTransactionWithStatusMeta {
+            transaction: EncodedTransactionWithStatusMeta {
+                transaction: EncodedTransaction::Json(UiTransaction {
+                    signatures: vec![Signature::new_unique().to_string()],
+                    message: UiMessage::Parsed(UiParsedMessage {
+                        account_keys: vec![
+                            ParsedAccount {
+                                pubkey: sender.clone(),
+                                writable: true,
+                                signer: true,
+                                source: None,
+                            },
+                            ParsedAccount {
+                                pubkey: receiver.clone(),
+                                writable: false,
+                                signer: false,
+                                source: None,
+                            },
+                        ],
+                        recent_blockhash: "4sZ76MsNd8y3WSw2L1nfd3AqLoYxdmC98sERoMRbHV14"
+                            .to_string(),
+                        instructions: vec![],
+                        address_table_lookups: None,
+                    }),
+                }),
+                meta: Some(UiTransactionStatusMeta {
+                    err: None,
+                    status: Ok(()),
+                    fee: 5000,
+                    pre_balances: vec![100_000, 50_000],
+                    post_balances: vec![85_000, 60_000],
+                    inner_instructions: OptionSerializer::Skip,
+                    log_messages: OptionSerializer::Skip,
+                    pre_token_balances: OptionSerializer::Skip,
+                    post_token_balances: OptionSerializer::Skip,
+                    rewards: OptionSerializer::Skip,
+                    loaded_addresses: OptionSerializer::Skip,
+                    return_data: OptionSerializer::Skip,
+                    compute_units_consumed: OptionSerializer::Skip,
+                }),
+                version: None,
+            },
+            slot: 42,
+            block_time: Some(1625077743),
+        };
+
+        // Raw message transaction (should be filtered out)
+        let txn2 = EncodedConfirmedTransactionWithStatusMeta {
+            transaction: EncodedTransactionWithStatusMeta {
+                transaction: EncodedTransaction::Json(UiTransaction {
+                    signatures: vec![Signature::new_unique().to_string()],
+                    message: UiMessage::Raw(UiRawMessage {
+                        header: MessageHeader {
+                            ..Default::default()
+                        },
+                        account_keys: vec![],
+                        recent_blockhash: "4sZ76MsNd8y3WSw2L1nfd3AqLoYxdmC98sERoMRbHV14"
+                            .to_string(),
+                        instructions: vec![],
+                        address_table_lookups: None,
+                    }),
+                }),
+
+                meta: Some(UiTransactionStatusMeta {
+                    err: None,
+                    status: Ok(()),
+                    fee: 5000,
+                    pre_balances: vec![100_000, 50_000],
+                    post_balances: vec![85_000, 60_000],
+                    inner_instructions: OptionSerializer::Skip,
+                    log_messages: OptionSerializer::Skip,
+                    pre_token_balances: OptionSerializer::Skip,
+                    post_token_balances: OptionSerializer::Skip,
+                    rewards: OptionSerializer::Skip,
+                    loaded_addresses: OptionSerializer::Skip,
+                    return_data: OptionSerializer::Skip,
+                    compute_units_consumed: OptionSerializer::Skip,
+                }),
+                version: None,
+            },
+            slot: 42,
+            block_time: Some(1625077743),
+        };
+
+        // Transaction with missing meta (should be filtered out)
+        let txn3 = EncodedConfirmedTransactionWithStatusMeta {
+            transaction: EncodedTransactionWithStatusMeta {
+                transaction: EncodedTransaction::Json(UiTransaction {
+                    signatures: vec![Signature::new_unique().to_string()],
+                    message: UiMessage::Parsed(UiParsedMessage {
+                        account_keys: vec![
+                            ParsedAccount {
+                                pubkey: sender,
+                                writable: true,
+                                signer: true,
+                                source: None,
+                            },
+                            ParsedAccount {
+                                pubkey: receiver,
+                                writable: false,
+                                signer: false,
+                                source: None,
+                            },
+                        ],
+                        recent_blockhash: "4sZ76MsNd8y3WSw2L1nfd3AqLoYxdmC98sERoMRbHV14"
+                            .to_string(),
+                        instructions: vec![],
+                        address_table_lookups: None,
+                    }),
+                }),
+                meta: None,
+                version: None,
+            },
+            slot: 42,
+            block_time: Some(1625077743),
+        };
+
+        let transactions = vec![txn1, txn2, txn3];
+
+        let processed_transactions = process_transactions(transactions);
+
+        // Only the first transaction is valid and should be processed
+        assert_eq!(processed_transactions.len(), 1);
     }
 }
