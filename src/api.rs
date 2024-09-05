@@ -7,12 +7,12 @@
 // Implementation:
 // * Use `actix-web` to create a RESTful API server.
 
-use std::sync::Arc;
-
 use crate::{data_processing::TransactionData, data_storage::get_all_transactions};
 
 use actix_web::{web, App, HttpServer, Responder};
 use sqlx::PgPool;
+
+use std::sync::Arc;
 
 /// Handler to get all transactions.
 async fn get_transactions(db: web::Data<Arc<PgPool>>) -> impl Responder {

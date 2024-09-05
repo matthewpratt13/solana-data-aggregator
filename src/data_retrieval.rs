@@ -10,6 +10,8 @@
 // * Implement a function to retrieve transactions and account data. This function will use asynchronous requests to fetch data.
 // * Use a background task (using `tokio::spawn`) to periodically poll the blockchain for new transactions.
 
+use crate::{data_processing::process_transactions, data_storage::insert_transaction};
+
 use log::{error, info};
 use solana_client::{
     rpc_client::{GetConfirmedSignaturesForAddress2Config, RpcClient},
@@ -21,8 +23,6 @@ use sqlx::PgPool;
 use tokio::time::{self, Duration};
 
 use std::{str::FromStr, sync::Arc};
-
-use crate::{data_processing::process_transactions, data_storage::insert_transaction};
 
 pub struct SolanaClient {
     client: RpcClient,

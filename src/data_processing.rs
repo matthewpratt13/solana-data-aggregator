@@ -470,7 +470,7 @@ mod tests {
                     pre_balances: vec![100_000, 50_000],
                     post_balances: vec![85_000, 60_000],
                     inner_instructions: OptionSerializer::Some(vec![]),
-                    log_messages:OptionSerializer::Some(vec![]),
+                    log_messages: OptionSerializer::Some(vec![]),
                     pre_token_balances: OptionSerializer::Some(vec![]),
                     post_token_balances: OptionSerializer::Some(vec![]),
                     rewards: OptionSerializer::Some(vec![]),

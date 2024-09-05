@@ -11,8 +11,6 @@ use std::{env, str::FromStr, sync::Arc};
 use data_retrieval::SolanaClient;
 use data_storage::get_pool;
 
-// TODO: test
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv()?;

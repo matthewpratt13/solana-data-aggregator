@@ -8,12 +8,12 @@
 // * In-memory storage: Use a thread-safe data structure (e.g., `HashMap` or `Vec`) to store data temporarily.
 // * Database storage: Use `sqlx` to interact with a PostgreSQL database.
 
-use std::sync::Arc;
-
 use crate::data_processing::TransactionData;
 
 use log::info;
 use sqlx::{postgres::PgPoolOptions, PgPool};
+
+use std::sync::Arc;
 
 pub async fn get_pool(db_url: &str) -> anyhow::Result<PgPool> {
     let pool = PgPoolOptions::new()
@@ -89,11 +89,9 @@ pub async fn get_all_transactions(pool: &Arc<PgPool>) -> anyhow::Result<Vec<Tran
 
 #[cfg(test)]
 mod tests {
-    use std::env;
-
     use super::*;
-
     use sqlx::PgPool;
+    use std::env;
 
     #[tokio::test]
     async fn test_store_transaction() -> Result<(), anyhow::Error> {
